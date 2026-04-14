@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  CANDIDATE
+}
+
+enum JobStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+}
+
+enum ExperienceLevel {
+  ENTRY
+  MID
+  SENIOR
+  LEAD
+  EXECUTIVE
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  SHORTLISTED
+  SCREENING
+  REJECTED
+  MANUAL_REVIEW
+  HIRED
+  WITHDRAWN
+}
+
+enum AIRecommendation {
+  REJECT
+  SHORTLIST
+  SCREENING
+  MANUAL_REVIEW
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole @default(CANDIDATE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  candidateProfile CandidateProfile?
+  jobs             Job[]
+  activityLogs     ActivityLog[]
+}
+
+model CandidateProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone             String?
+  location          String?
+  linkedIn          String?
+  portfolio         String?
+  yearsOfExperience Int?
+  skills            String[]
+  education         String?
+  workAuthorization String?
+  noticePeriod      String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  applications Application[]
+}
+
+model Job {
+  id              String          @id @default(cuid())
+  title           String
+  department      String?
+  location        String
+  employmentType  EmploymentType  @default(FULL_TIME)
+  experienceLevel ExperienceLevel @default(MID)
+  salaryMin       Int?
+  salaryMax       Int?
+  description     String
+  requiredSkills  String[]
+  preferredSkills String[]
+  status          JobStatus       @default(DRAFT)
+  createdById     String
+  createdBy       User            @relation(fields: [createdById], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  applications       Application[]
+  screeningQuestions ScreeningQuestion[]
+}
+
+model Application {
+  id                 String            @id @default(cuid())
+  jobId              String
+  job                Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidateProfileId String
+  candidateProfile   CandidateProfile  @relation(fields: [candidateProfileId], references: [id], onDelete: Cascade)
+  status             ApplicationStatus @default(SUBMITTED)
+  coverLetter        String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  resume           Resume?
+  aiEvaluation     AIEvaluation?
+  screeningAnswers ScreeningAnswer[]
+  activityLogs     ActivityLog[]
+
+  @@unique([jobId, candidateProfileId])
+}
+
+model Resume {
+  id            String      @id @default(cuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  originalName  String
+  filePath      String
+  mimeType      String
+  fileSize      Int
+  extractedText String?
+  parsedData    Json?
+  createdAt     DateTime    @default(now())
+}
+
+model AIEvaluation {
+  id            String      @id @default(cuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  matchScore        Int
+  confidenceScore   Float
+  ruleBasedScore    Int?
+
+  summary            String
+  strengths          String[]
+  concerns           String[]
+  missingSkills      String[]
+  recommendation     AIRecommendation
+  reasoning          String
+  suggestedQuestions String[]
+
+  promptVersion String
+  providerUsed  String
+  modelUsed     String
+  rawResponse   Json
+
+  evaluatedAt DateTime @default(now())
+
+  adminOverride  Boolean   @default(false)
+  overrideReason String?
+  overriddenBy   String?
+  overriddenAt   DateTime?
+}
+
+model ScreeningQuestion {
+  id        String   @id @default(cuid())
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  question  String
+  orderNum  Int      @default(0)
+  required  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  answers ScreeningAnswer[]
+}
+
+model ScreeningAnswer {
+  id            String            @id @default(cuid())
+  questionId    String
+  question      ScreeningQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  applicationId String
+  application   Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  answer        String
+  createdAt     DateTime          @default(now())
+
+  @@unique([questionId, applicationId])
+}
+
+model ActivityLog {
+  id            String       @id @default(cuid())
+  applicationId String?
+  application   Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  performedById String?
+  performedBy   User?        @relation(fields: [performedById], references: [id], onDelete: SetNull)
+  action        String
+  details       Json?
+  createdAt     DateTime     @default(now())
+}
