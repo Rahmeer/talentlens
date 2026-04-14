@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import type { ApplicationStatus } from "@prisma/client";
+import { deleteFile } from "@/services/file-storage";
 
 export async function updateApplicationStatus(
   applicationId: string,
@@ -65,6 +66,33 @@ export async function updateApplicationStatus(
   revalidatePath(`/admin/jobs/${application.jobId}/applicants`);
   revalidatePath(`/admin/jobs/${application.jobId}/applicants/${applicationId}`);
 
+  return { success: true };
+}
+export async function deleteApplication(applicationId: string, jobId: string) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "ADMIN") {
+    return { error: "Unauthorized" };
+  }
+
+  const application = await prisma.application.findUnique({
+    where: { id: applicationId },
+    include: { resume: true },
+  });
+
+  if (!application) {
+    return { error: "Application not found" };
+  }
+
+  if (application.resume?.filePath) {
+    await deleteFile(application.resume.filePath);
+  }
+
+  await prisma.application.delete({
+    where: { id: applicationId },
+  });
+
+  revalidatePath(`/admin/jobs/${jobId}/applicants`);
+  
   return { success: true };
 }
 

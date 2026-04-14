@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Plus, Briefcase, MapPin, Users, Eye, Pencil } from "lucide-react";
 import { getStatusColor, formatEmploymentType } from "@/lib/utils";
 import { updateJobStatus } from "@/actions/jobs";
+import { DeleteJobButton } from "@/components/admin/delete-job-button";
 
 export const metadata = { title: "Manage Jobs — TalentLens" };
 
@@ -56,6 +57,7 @@ export default async function AdminJobsPage() {
                     {job.status === "PUBLISHED" && (
                       <form action={async () => { "use server"; await updateJobStatus(job.id, "CLOSED"); }}><Button variant="destructive" size="sm" type="submit">Close</Button></form>
                     )}
+                    <DeleteJobButton jobId={job.id} />
                   </div>
                 </div>
               </div>

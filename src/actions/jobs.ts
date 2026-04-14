@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { jobSchema } from "@/lib/validations/job";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { deleteFile } from "@/services/file-storage";
 
 export async function createJob(formData: FormData) {
   const session = await auth();
@@ -127,13 +128,33 @@ export async function deleteJob(jobId: string) {
     return { error: "Unauthorized" };
   }
 
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    include: {
+      applications: {
+        include: { resume: true },
+      },
+    },
+  });
+
+  if (!job) {
+    return { error: "Job not found" };
+  }
+
+  // Delete all associated files
+  for (const app of job.applications) {
+    if (app.resume?.filePath) {
+      await deleteFile(app.resume.filePath);
+    }
+  }
+
   await prisma.job.delete({ where: { id: jobId } });
 
   await prisma.activityLog.create({
     data: {
       performedById: session.user.id,
       action: "JOB_DELETED",
-      details: { jobId },
+      details: { jobId, title: job.title },
     },
   });
 

@@ -8,7 +8,7 @@ import Link from "next/link";
 import { ArrowLeft, Brain, CheckCircle2, XCircle, AlertTriangle, Clock, Shield, FileText, User, Mail, Phone, MapPin, Briefcase, GraduationCap, ExternalLink } from "lucide-react";
 import { formatRelativeDate, getScoreColor, getScoreBgColor, getStatusColor } from "@/lib/utils";
 import { StatusActions } from "@/components/admin/status-actions";
-
+import { DeleteApplicationButton } from "@/components/admin/delete-application-button";
 export default async function ApplicantDetailPage({ params }: { params: Promise<{ id: string; appId: string }> }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "ADMIN") redirect("/login");
@@ -101,6 +101,7 @@ export default async function ApplicantDetailPage({ params }: { params: Promise<
           </div>
           <div className="space-y-6">
             <StatusActions applicationId={appId} currentStatus={application.status} />
+            <DeleteApplicationButton applicationId={appId} jobId={jobId} />
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><User className="h-5 w-5" /> Profile</CardTitle></CardHeader>
               <CardContent className="space-y-3">
